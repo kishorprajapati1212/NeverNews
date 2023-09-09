@@ -1,6 +1,6 @@
 {
 
-  "homepage": "https://kishorprajapati1212.github.io/NeverNews",
+  "homepage": "https://github.com/kishorprajapati1212/NeverNews",
 
   "name": "fourth",
 
@@ -36,7 +36,7 @@
 
     "predeploy": "npm run build",
 
-    "deploy": "gh-pages -d build",
+    "deploy": "gh-pages -b master -d build",
 
     "start": "react-scripts start",
 
