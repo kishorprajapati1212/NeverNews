@@ -1,16 +1,16 @@
 {
   "files": {
-    "main.css": "/kishorprajapati1212/NeverNews.git/static/css/main.073c9b0a.css",
-    "main.js": "/kishorprajapati1212/NeverNews.git/static/js/main.7366e051.js",
-    "static/js/787.6e86ed84.chunk.js": "/kishorprajapati1212/NeverNews.git/static/js/787.6e86ed84.chunk.js",
-    "static/media/loading.gif": "/kishorprajapati1212/NeverNews.git/static/media/loading.f0e34308b0499be27697.gif",
-    "index.html": "/kishorprajapati1212/NeverNews.git/index.html",
-    "main.073c9b0a.css.map": "/kishorprajapati1212/NeverNews.git/static/css/main.073c9b0a.css.map",
-    "main.7366e051.js.map": "/kishorprajapati1212/NeverNews.git/static/js/main.7366e051.js.map",
-    "787.6e86ed84.chunk.js.map": "/kishorprajapati1212/NeverNews.git/static/js/787.6e86ed84.chunk.js.map"
+    "main.css": "/kishorprajapati1212/NeverNews/static/css/main.073c9b0a.css",
+    "main.js": "/kishorprajapati1212/NeverNews/static/js/main.09a25bbc.js",
+    "static/js/787.6e86ed84.chunk.js": "/kishorprajapati1212/NeverNews/static/js/787.6e86ed84.chunk.js",
+    "static/media/loading.gif": "/kishorprajapati1212/NeverNews/static/media/loading.f0e34308b0499be27697.gif",
+    "index.html": "/kishorprajapati1212/NeverNews/index.html",
+    "main.073c9b0a.css.map": "/kishorprajapati1212/NeverNews/static/css/main.073c9b0a.css.map",
+    "main.09a25bbc.js.map": "/kishorprajapati1212/NeverNews/static/js/main.09a25bbc.js.map",
+    "787.6e86ed84.chunk.js.map": "/kishorprajapati1212/NeverNews/static/js/787.6e86ed84.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.073c9b0a.css",
-    "static/js/main.7366e051.js"
+    "static/js/main.09a25bbc.js"
   ]
 }
