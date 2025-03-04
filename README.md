@@ -2,7 +2,8 @@
 
 NeverNews is a modern news app built with React that fetches and displays the latest news using NewsAPI. Stay updated with real-time headlines across various categories in a sleek, user-friendly interface.
 
-🚀 Features 
+🚀 Features :-
+
 ✅ Fetches real-time news from NewsAPI 
 
 ✅ Categorized news for easy browsing
@@ -11,7 +12,8 @@ NeverNews is a modern news app built with React that fetches and displays the la
 
 ✅ Fast and smooth user experience
 
-🛠️ Tech Stack
+🛠️ Tech Stack:-
+
 React – Frontend framework
 
 NewsAPI – For fetching news data
@@ -19,6 +21,7 @@ NewsAPI – For fetching news data
 CSS / Tailwind – For styling
 
 📦 Installationm
+
 Clone the repository and navigate to the project folder.
 
 Install dependencies using **npm install.**
