@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Splash Admin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            mono: ['"IBM Plex Mono"', 'monospace'],
+            display: ['Syne', 'sans-serif'],
+          },
+          colors: {
+            ink: '#0f0f0d',
+            muted: '#6b6b62',
+            ghost: '#a3a39a',
+            line: '#e4e4de',
+            soft: '#f5f5f2',
+            page: '#fafaf8',
+            emerald: { flag: '#16a34a', pale: '#dcfce7' },
+            amber: { flag: '#b45309', pale: '#fef3c7' },
+            rose: { flag: '#dc2626', pale: '#fee2e2' },
+            sky: { flag: '#1d4ed8', pale: '#dbeafe' },
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: 'Syne', sans-serif; background: #fafaf8; color: #0f0f0d; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-thumb { background: #d1d1c8; border-radius: 9px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    .tab-bar::-webkit-scrollbar { display: none; }
+
+    /* Progress bar animation */
+    .bar-fill { transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+
+    /* Card hover */
+    .class-card { transition: box-shadow 0.18s, transform 0.18s; }
+    .class-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.09); transform: translateY(-1px); }
+
+    /* Pulse dot */
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+    .pulse { animation: pulse 2s infinite; }
+
+    /* Toggle switch */
+    .toggle-track { transition: background 0.2s; }
+    .toggle-thumb { transition: left 0.2s; }
+
+    /* Fade-in for tab panels */
+    @keyframes fadein { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+    .panel { animation: fadein 0.22s ease; }
+
+    /* Modal overlay */
+    .modal-overlay { backdrop-filter: blur(3px); }
+
+    /* Staggered card entries */
+    @keyframes cardIn { from{opacity:0;transform:scale(.97) translateY(8px)} to{opacity:1;transform:none} }
+    .card-anim { animation: cardIn 0.28s ease both; }
+
+    input:focus { outline: none; box-shadow: 0 0 0 3px rgba(15,15,13,0.1); }
+    button { font-family: inherit; }
+  </style>
+</head>
+<body class="min-h-screen bg-page">
+
+<!-- ══════════════════ NAV ══════════════════ -->
+<nav class="sticky top-0 z-50 bg-white border-b border-line shadow-sm">
+  <div class="max-w-7xl mx-auto px-4 flex items-center gap-0">
+    <!-- Logo -->
+    <div class="font-mono font-semibold text-sm tracking-tight text-ink py-[14px] pr-6 shrink-0 flex items-center gap-2">
+      <span class="text-lg">⬡</span> ADMIN
+    </div>
+    <!-- Tabs -->
+    <div class="tab-bar flex overflow-x-auto flex-1" id="navTabs">
+      <!-- injected by JS -->
+    </div>
+    <!-- Clock -->
+    <div class="hidden sm:flex items-center gap-2 ml-4 shrink-0">
+      <span class="pulse w-2 h-2 rounded-full bg-emerald-flag inline-block"></span>
+      <span class="font-mono text-xs text-ghost" id="clockDisplay">--:--:--</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<main class="max-w-7xl mx-auto px-4 py-6 pb-16">
+  <div id="appRoot"></div>
+</main>
+
+<!-- ══════════════════ MODAL ══════════════════ -->
+<div id="modalOverlay" class="modal-overlay fixed inset-0 bg-black/30 z-[200] hidden flex items-center justify-center p-4">
+  <div id="modalBox" class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-ghost hover:text-ink text-xl leading-none">×</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ TOAST ══════════════════ -->
+<div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-[300] hidden">
+  <div id="toastInner" class="font-mono text-xs font-medium px-4 py-2 rounded-full bg-ink text-white shadow-lg"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════
+let classes = [
+  { id:1, name:"Intro to Machine Learning",   teacher:"Dr. Sarah Chen",      room:"A-201", cap:30, overCap:33, enrolled:28, checkins:24, teacherIn:true,  open:true,  flags:[] },
+  { id:2, name:"Organic Chemistry Lab",        teacher:"Prof. Marcus Webb",   room:"B-105", cap:24, overCap:26, enrolled:24, checkins:19, teacherIn:false, open:false, flags:["missing_teacher"] },
+  { id:3, name:"Creative Writing Workshop",    teacher:"Ms. Priya Nair",      room:"C-310", cap:20, overCap:22, enrolled:17, checkins:17, teacherIn:true,  open:true,  flags:[] },
+  { id:4, name:"Robotics & Automation",        teacher:"Mr. James Park",      room:"D-012", cap:18, overCap:20, enrolled:18, checkins:12, teacherIn:true,  open:false, flags:["room_change"] },
+  { id:5, name:"Philosophy of Science",        teacher:"Dr. Elena Vasquez",   room:"A-110", cap:35, overCap:38, enrolled:31, checkins:27, teacherIn:true,  open:true,  flags:[] },
+  { id:6, name:"Digital Photography",          teacher:"Ms. Yuki Tanaka",     room:"E-220", cap:15, overCap:17, enrolled:9,  checkins:6,  teacherIn:true,  open:true,  flags:[] },
+  { id:7, name:"Advanced Calculus",            teacher:"Prof. Alan Torres",   room:"B-201", cap:28, overCap:30, enrolled:28, checkins:21, teacherIn:false, open:false, flags:["missing_teacher","class_delay"] },
+  { id:8, name:"Public Speaking 101",          teacher:"Dr. Nina Patel",      room:"C-105", cap:22, overCap:25, enrolled:14, checkins:14, teacherIn:true,  open:true,  flags:[] },
+];
+
+const students = [
+  { id:1, name:"Alex Johnson",  grade:10, classes:[1,3], checkedIn:true  },
+  { id:2, name:"Maya Patel",    grade:11, classes:[2,5], checkedIn:true  },
+  { id:3, name:"Ethan Wu",      grade:9,  classes:[1,4], checkedIn:false },
+  { id:4, name:"Sofia Reyes",   grade:12, classes:[5,7], checkedIn:true  },
+  { id:5, name:"Liam Chen",     grade:10, classes:[3,6], checkedIn:false },
+  { id:6, name:"Zoe Müller",    grade:11, classes:[2,8], checkedIn:true  },
+  { id:7, name:"Noah Kim",      grade:9,  classes:[4,5], checkedIn:true  },
+  { id:8, name:"Ava Thompson",  grade:12, classes:[1,8], checkedIn:false },
+];
+
+const FLAGS = {
+  missing_teacher: { label:"Missing Teacher", color:"rose" },
+  class_delay:     { label:"Class Delay",     color:"amber" },
+  room_change:     { label:"Room Change",     color:"amber" },
+};
+
+const TABS = ["Dashboard","Students","Teachers","Classes","Attendance","Settings"];
+let activeTab = "Dashboard";
+let searchQ = "";
+let lastRefresh = new Date();
+
+// ═══════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════
+const pct = (n,d) => d>0 ? Math.min(100, Math.round(n/d*100)) : 0;
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const $ = id => document.getElementById(id);
+
+function showToast(msg, type="ok") {
+  const t = $("toast"), ti = $("toastInner");
+  ti.textContent = msg;
+  ti.className = `font-mono text-xs font-semibold px-4 py-2 rounded-full shadow-lg ${type==="ok"?"bg-ink text-white":"bg-rose-flag text-white"}`;
+  t.classList.remove("hidden");
+  setTimeout(()=>t.classList.add("hidden"), 2400);
+}
+
+function openModal(html) {
+  $("modalContent").innerHTML = html;
+  $("modalOverlay").classList.remove("hidden");
+}
+function closeModal() {
+  $("modalOverlay").classList.add("hidden");
+}
+$("modalOverlay").addEventListener("click", e => { if(e.target===$("modalOverlay")) closeModal(); });
+
+// ═══════════════════════════════════════════════════
+//  CLOCK
+// ═══════════════════════════════════════════════════
+function updateClock() {
+  $("clockDisplay").textContent = new Date().toLocaleTimeString();
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ═══════════════════════════════════════════════════
+//  AUTO-REFRESH SIMULATION
+// ═══════════════════════════════════════════════════
+setInterval(() => {
+  classes = classes.map(c => ({
+    ...c,
+    checkins: Math.min(c.enrolled, c.checkins + (Math.random() > 0.82 ? 1 : 0))
+  }));
+  lastRefresh = new Date();
+  render();
+}, 8000);
+
+// ═══════════════════════════════════════════════════
+//  NAV
+// ═══════════════════════════════════════════════════
+function renderNav() {
+  $("navTabs").innerHTML = TABS.map(t => `
+    <button onclick="switchTab('${t}')"
+      class="tab-btn px-4 py-[14px] text-sm font-semibold whitespace-nowrap border-b-2 transition-colors duration-150
+        ${activeTab===t ? "border-ink text-ink" : "border-transparent text-ghost hover:text-ink"}">
+      ${t}
+    </button>
+  `).join("");
+}
+
+function switchTab(t) {
+  activeTab = t;
+  searchQ = "";
+  render();
+}
+
+// ═══════════════════════════════════════════════════
+//  STATS STRIP
+// ═══════════════════════════════════════════════════
+function statsHtml() {
+  const totalEnrolled = classes.reduce((a,c)=>a+c.enrolled,0);
+  const totalCheckins = classes.reduce((a,c)=>a+c.checkins,0);
+  const teachersIn    = classes.filter(c=>c.teacherIn).length;
+  const full          = classes.filter(c=>c.enrolled>=c.cap).length;
+  const issues        = classes.filter(c=>c.flags.length>0).length;
+  const openC         = classes.filter(c=>c.open).length;
+  const rate          = pct(totalCheckins,totalEnrolled);
+
+  const card = (label,val,sub,accent="text-ink") => `
+    <div class="bg-white border border-line rounded-xl px-4 py-3 shadow-sm">
+      <div class="font-mono text-[10px] uppercase tracking-widest text-ghost mb-1">${label}</div>
+      <div class="font-mono text-2xl font-semibold ${accent}">${val}</div>
+      ${sub?`<div class="text-xs text-muted mt-0.5">${sub}</div>`:""}
+    </div>`;
+
+  return `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+    ${card("Total Classes", classes.length, `${openC} open`)}
+    ${card("Students In", totalCheckins, `of ${totalEnrolled} enrolled`, "text-emerald-flag")}
+    ${card("Teachers In", teachersIn, `of ${classes.length}`, teachersIn<classes.length?"text-amber-flag":"text-emerald-flag")}
+    ${card("Classes Full", full, "at capacity", full>0?"text-rose-flag":"text-ink")}
+    ${card("Issues", issues, "need attention", issues>0?"text-rose-flag":"text-ink")}
+    ${card("Check-in Rate", rate+"%", "overall")}
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+//  SEARCH BAR
+// ═══════════════════════════════════════════════════
+function searchBarHtml(placeholder) {
+  return `
+    <div class="relative mb-5">
+      <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ghost w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+      </svg>
+      <input id="searchInput" type="text" value="${esc(searchQ)}" placeholder="${placeholder}"
+        class="w-full pl-10 pr-10 py-2.5 border border-line rounded-xl text-sm bg-white focus:border-ink transition"
+        oninput="onSearch(this.value)" />
+      ${searchQ?`<button onclick="onSearch('')" class="absolute right-3 top-1/2 -translate-y-1/2 text-ghost hover:text-ink text-xl leading-none">×</button>`:""}
+    </div>`;
+}
+
+function onSearch(val) {
+  searchQ = val;
+  render();
+  // re-focus input
+  setTimeout(()=>{ const el=$("searchInput"); if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);} },0);
+}
+
+// ═══════════════════════════════════════════════════
+//  PROGRESS BAR
+// ═══════════════════════════════════════════════════
+function progressBar(val, max, color, label, count) {
+  const p = pct(val, max);
+  return `
+    <div class="mb-2">
+      <div class="flex justify-between items-center mb-1">
+        <span class="font-mono text-[10px] tracking-wider text-muted uppercase">${label}</span>
+        <span class="font-mono text-[11px] font-semibold text-ink">${count}</span>
+      </div>
+      <div class="h-1.5 bg-soft rounded-full overflow-hidden">
+        <div class="bar-fill h-full rounded-full ${color}" style="width:${p}%"></div>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+//  FLAG BADGE
+// ═══════════════════════════════════════════════════
+function flagBadge(key) {
+  const f = FLAGS[key]; if(!f) return "";
+  const cls = f.color==="rose"
+    ? "bg-rose-pale text-rose-flag"
+    : "bg-amber-pale text-amber-flag";
+  return `<span class="font-mono text-[10px] font-semibold px-2 py-0.5 rounded-full ${cls}">● ${f.label}</span>`;
+}
+
+// ═══════════════════════════════════════════════════
+//  TOGGLE
+// ═══════════════════════════════════════════════════
+function toggleHtml(checked, onclick) {
+  return `
+    <div onclick="${onclick}" class="toggle-track cursor-pointer w-10 h-5 rounded-full relative flex-shrink-0 ${checked?"bg-emerald-flag":"bg-line"}">
+      <div class="toggle-thumb absolute top-[3px] w-3.5 h-3.5 rounded-full bg-white shadow-sm ${checked?"left-[22px]":"left-[3px]"}"></div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+//  CLASS CARD
+// ═══════════════════════════════════════════════════
+function classCardHtml(c, i) {
+  const hasFlagRed  = c.flags.includes("missing_teacher");
+  const hasFlagYel  = c.flags.some(f=>["class_delay","room_change"].includes(f));
+  const borderCls   = hasFlagRed ? "border-rose-flag" : hasFlagYel ? "border-amber-flag" : "border-line";
+  const full        = c.enrolled >= c.cap;
+  const delay       = `${i*40}ms`;
+
+  return `
+    <div class="class-card card-anim bg-white border ${borderCls} rounded-xl p-4 shadow-sm flex flex-col gap-3"
+         style="animation-delay:${delay}">
+
+      <!-- Header -->
+      <div class="flex justify-between items-start gap-2">
+        <div class="flex-1 min-w-0">
+          <div class="font-display font-bold text-sm leading-tight mb-0.5 break-words">${esc(c.name)}</div>
+          <div class="text-xs text-muted">${esc(c.teacher)}</div>
+        </div>
+        <div class="flex flex-col items-end gap-1 shrink-0">
+          <span class="font-mono text-[10px] bg-soft border border-line rounded-md px-2 py-0.5 text-muted">Rm ${esc(c.room)}</span>
+          ${full?`<span class="font-mono text-[10px] bg-rose-pale text-rose-flag font-bold rounded-md px-2 py-0.5">FULL</span>`:""}
+        </div>
+      </div>
+
+      <!-- Bars -->
+      <div>
+        ${progressBar(c.enrolled, c.cap, "bg-ink", "Enrollment", `${c.enrolled}/${c.cap}`)}
+        ${progressBar(c.checkins, c.cap, "bg-emerald-flag", "Check-ins",  `${c.checkins}/${c.cap}`)}
+      </div>
+
+      <!-- Teacher status -->
+      <div class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full ${c.teacherIn?"bg-emerald-flag":"bg-rose-flag"} shrink-0"></span>
+        <span class="font-mono text-[11px] ${c.teacherIn?"text-emerald-flag":"text-rose-flag"} font-semibold">
+          ${c.teacherIn?"Teacher In":"Teacher Missing"}
+        </span>
+      </div>
+
+      <!-- Flags -->
+      ${c.flags.length>0?`<div class="flex flex-wrap gap-1.5">${c.flags.map(flagBadge).join("")}</div>`:""}
+
+      <!-- Actions -->
+      <div class="flex items-center justify-between pt-2 border-t border-line">
+        <div class="flex items-center gap-2">
+          ${toggleHtml(c.open, `confirmToggle(${c.id})`)}
+          <span class="font-mono text-[11px] font-bold ${c.open?"text-emerald-flag":"text-ghost"}">${c.open?"OPEN":"CLOSED"}</span>
+        </div>
+        <div class="flex gap-1.5">
+          <button onclick="openEditCap(${c.id})"
+            class="font-mono text-[11px] px-2.5 py-1 border border-line rounded-lg text-muted hover:border-ink hover:text-ink transition">
+            Edit Cap
+          </button>
+          <button onclick="openFlagModal(${c.id})"
+            class="font-mono text-[11px] px-2.5 py-1 border border-line rounded-lg text-muted hover:border-amber-flag hover:text-amber-flag transition">
+            Flag
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════════
+
+// ── Dashboard ──
+function dashboardHtml() {
+  const q = searchQ.toLowerCase();
+  const filtered = q ? classes.filter(c =>
+    c.name.toLowerCase().includes(q) || c.teacher.toLowerCase().includes(q) || c.room.toLowerCase().includes(q)
+  ) : classes;
+
+  return `
+    <div class="panel">
+      <!-- Header -->
+      <div class="flex flex-wrap justify-between items-start gap-3 mb-5">
+        <div>
+          <h1 class="font-display font-bold text-xl mb-0.5">Live Operations</h1>
+          <p class="font-mono text-xs text-ghost flex items-center gap-1.5">
+            <span class="pulse w-2 h-2 rounded-full bg-emerald-flag inline-block"></span>
+            Last updated ${lastRefresh.toLocaleTimeString()} · Auto-refresh every 8s
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="bulkOpen()" class="text-xs font-bold px-3 py-1.5 bg-emerald-flag text-white rounded-lg hover:opacity-90 transition">Open All</button>
+          <button onclick="bulkClose()" class="text-xs font-bold px-3 py-1.5 bg-white border border-line rounded-lg hover:border-ink transition">Close All</button>
+        </div>
+      </div>
+
+      ${statsHtml()}
+      ${searchBarHtml("Search classes, teachers, rooms…")}
+
+      ${filtered.length===0
+        ? `<div class="text-center py-16 font-mono text-sm text-ghost">No results for "${esc(searchQ)}"</div>`
+        : `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+             ${filtered.map((c,i)=>classCardHtml(c,i)).join("")}
+           </div>`
+      }
+    </div>`;
+}
+
+// ── Students ──
+function studentsHtml() {
+  const q = searchQ.toLowerCase();
+  const list = q ? students.filter(s=>s.name.toLowerCase().includes(q)) : students;
+  return `
+    <div class="panel">
+      <div class="mb-5">
+        <h2 class="font-display font-bold text-lg mb-1">Students</h2>
+        <p class="text-xs text-muted">${students.length} registered · ${students.filter(s=>s.checkedIn).length} checked in</p>
+      </div>
+      ${searchBarHtml("Search students…")}
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        ${list.map((s,i)=>{
+          const sClasses = s.classes.map(cid=>classes.find(c=>c.id===cid)).filter(Boolean);
+          return `
+            <div class="card-anim bg-white border border-line rounded-xl p-4 shadow-sm" style="animation-delay:${i*35}ms">
+              <div class="flex justify-between items-start mb-3">
+                <div>
+                  <div class="font-display font-bold text-sm">${esc(s.name)}</div>
+                  <div class="font-mono text-[11px] text-ghost mt-0.5">Grade ${s.grade}</div>
+                </div>
+                <span class="font-mono text-[10px] font-bold px-2.5 py-1 rounded-full ${s.checkedIn?"bg-emerald-pale text-emerald-flag":"bg-amber-pale text-amber-flag"}">
+                  ${s.checkedIn?"✓ IN":"PENDING"}
+                </span>
+              </div>
+              <div class="space-y-1">
+                ${sClasses.map(c=>`
+                  <div class="text-xs text-muted flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-line shrink-0"></span>
+                    ${esc(c.name)}
+                  </div>`).join("")}
+              </div>
+            </div>`;
+        }).join("")}
+      </div>
+    </div>`;
+}
+
+// ── Teachers ──
+function teachersHtml() {
+  return `
+    <div class="panel">
+      <div class="mb-5">
+        <h2 class="font-display font-bold text-lg mb-1">Teacher Check-ins</h2>
+        <p class="text-xs text-muted">Real-time teacher presence per class</p>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        ${classes.map((c,i)=>`
+          <div class="card-anim bg-white border ${c.teacherIn?"border-line":"border-rose-flag"} rounded-xl p-4 shadow-sm flex items-center gap-3"
+               style="animation-delay:${i*35}ms">
+            <div class="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center text-lg font-bold
+              ${c.teacherIn?"bg-emerald-pale text-emerald-flag":"bg-rose-pale text-rose-flag"}">
+              ${c.teacherIn?"✓":"!"}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="font-display font-bold text-sm truncate">${esc(c.teacher)}</div>
+              <div class="text-xs text-muted truncate mt-0.5">${esc(c.name)}</div>
+              <div class="flex items-center gap-1.5 mt-1">
+                <span class="w-1.5 h-1.5 rounded-full ${c.teacherIn?"bg-emerald-flag":"bg-rose-flag"} shrink-0"></span>
+                <span class="font-mono text-[11px] font-semibold ${c.teacherIn?"text-emerald-flag":"text-rose-flag"}">${c.teacherIn?"Present":"Missing"}</span>
+              </div>
+            </div>
+            <div class="font-mono text-[11px] text-ghost text-right shrink-0">Rm ${esc(c.room)}</div>
+          </div>`).join("")}
+      </div>
+    </div>`;
+}
+
+// ── Classes ──
+function classesHtml() {
+  return `
+    <div class="panel">
+      <div class="flex flex-wrap justify-between items-start gap-3 mb-5">
+        <div>
+          <h2 class="font-display font-bold text-lg mb-1">All Classes</h2>
+          <p class="text-xs text-muted">${classes.length} total · ${classes.filter(c=>c.open).length} open for registration</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        ${classes.map((c,i)=>classCardHtml(c,i)).join("")}
+      </div>
+    </div>`;
+}
+
+// ── Attendance ──
+function attendanceHtml() {
+  return `
+    <div class="panel">
+      <div class="mb-5">
+        <h2 class="font-display font-bold text-lg mb-1">Attendance Overview</h2>
+        <p class="text-xs text-muted">Live check-in status per student</p>
+      </div>
+      <div class="bg-white border border-line rounded-xl shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="border-b-2 border-line">
+              <tr>
+                ${["Student","Grade","Enrolled Classes","Check-in Status"].map(h=>
+                  `<th class="text-left px-4 py-3 font-mono text-[10px] uppercase tracking-widest text-ghost whitespace-nowrap">${h}</th>`
+                ).join("")}
+              </tr>
+            </thead>
+            <tbody>
+              ${students.map((s,i)=>{
+                const sClasses = s.classes.map(cid=>classes.find(c=>c.id===cid)).filter(Boolean);
+                return `
+                  <tr class="border-b border-line hover:bg-soft transition-colors" style="animation-delay:${i*30}ms">
+                    <td class="px-4 py-3 font-semibold">${esc(s.name)}</td>
+                    <td class="px-4 py-3 font-mono text-xs text-muted">G${s.grade}</td>
+                    <td class="px-4 py-3">
+                      <div class="flex flex-wrap gap-1">
+                        ${sClasses.map(c=>`
+                          <span class="font-mono text-[10px] bg-soft border border-line rounded-md px-1.5 py-0.5">
+                            ${esc(c.name.split(" ").slice(0,3).join(" "))}
+                          </span>`).join("")}
+                      </div>
+                    </td>
+                    <td class="px-4 py-3">
+                      <span class="font-mono text-[10px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5
+                        ${s.checkedIn?"bg-emerald-pale text-emerald-flag":"bg-amber-pale text-amber-flag"}">
+                        ${s.checkedIn?"● CHECKED IN":"○ PENDING"}
+                      </span>
+                    </td>
+                  </tr>`;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Settings ──
+function settingsHtml() {
+  const openCount  = classes.filter(c=>c.open).length;
+  const closeCount = classes.length - openCount;
+  return `
+    <div class="panel max-w-xl">
+      <div class="mb-6">
+        <h2 class="font-display font-bold text-lg mb-1">Event Settings</h2>
+        <p class="text-xs text-muted">Global controls for the current Splash session</p>
+      </div>
+      <div class="space-y-4">
+
+        <div class="bg-white border border-line rounded-xl p-5">
+          <div class="font-display font-bold mb-1">Bulk Registration Control</div>
+          <div class="text-xs text-muted mb-4">Currently: <strong>${openCount} open</strong>, <strong>${closeCount} closed</strong></div>
+          <div class="flex gap-3">
+            <button onclick="bulkOpen()" class="flex-1 py-2.5 bg-emerald-flag text-white rounded-xl font-bold text-sm hover:opacity-90 transition">Open All</button>
+            <button onclick="bulkClose()" class="flex-1 py-2.5 bg-rose-flag text-white rounded-xl font-bold text-sm hover:opacity-90 transition">Close All</button>
+          </div>
+        </div>
+
+        <div class="bg-white border border-line rounded-xl p-5">
+          <div class="font-display font-bold mb-1">Auto-Refresh</div>
+          <div class="text-xs text-muted mb-3">Dashboard polls for live updates every 8 seconds.</div>
+          <div class="font-mono text-xs bg-soft border border-line rounded-lg px-3 py-2 text-muted flex items-center gap-2">
+            <span class="pulse w-2 h-2 rounded-full bg-emerald-flag inline-block"></span>
+            Interval: 8000ms · Status: Active
+          </div>
+        </div>
+
+        <div class="bg-white border border-line rounded-xl p-5">
+          <div class="font-display font-bold mb-1">Event Session</div>
+          <div class="text-xs text-muted mb-4">Current: <strong>Splash Spring 2026</strong></div>
+          <div class="flex gap-3">
+            <button onclick="showToast('CSV export started…')" class="flex-1 py-2.5 bg-soft border border-line rounded-xl font-bold text-sm hover:border-ink transition">Export CSV</button>
+            <button onclick="showToast('Print dialog opening…')" class="flex-1 py-2.5 bg-soft border border-line rounded-xl font-bold text-sm hover:border-ink transition">Print Report</button>
+          </div>
+        </div>
+
+        <div class="bg-white border border-line rounded-xl p-5">
+          <div class="font-display font-bold mb-3">Issue Summary</div>
+          <div class="space-y-2">
+            ${Object.entries(FLAGS).map(([key,f])=>{
+              const count = classes.filter(c=>c.flags.includes(key)).length;
+              const cls = f.color==="rose"?"bg-rose-pale text-rose-flag":"bg-amber-pale text-amber-flag";
+              return `
+                <div class="flex items-center justify-between text-sm">
+                  <span class="text-muted">${f.label}</span>
+                  <span class="font-mono font-bold text-xs px-2.5 py-0.5 rounded-full ${cls}">${count} class${count!==1?"es":""}</span>
+                </div>`;
+            }).join("")}
+          </div>
+        </div>
+
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+//  ACTIONS
+// ═══════════════════════════════════════════════════
+function confirmToggle(id) {
+  const c = classes.find(x=>x.id===id);
+  openModal(`
+    <h3 class="font-display font-bold text-base mb-1">Confirm Registration Change</h3>
+    <p class="text-sm text-muted mb-5">
+      <strong>${esc(c.name)}</strong> — switch to
+      <strong>${c.open?"CLOSED":"OPEN"}</strong>?
+    </p>
+    <div class="flex gap-3">
+      <button onclick="closeModal()" class="flex-1 py-2.5 border border-line rounded-xl font-bold text-sm hover:border-ink transition">Cancel</button>
+      <button onclick="doToggle(${id})" class="flex-1 py-2.5 bg-ink text-white rounded-xl font-bold text-sm hover:opacity-90 transition">Confirm</button>
+    </div>`);
+}
+
+function doToggle(id) {
+  classes = classes.map(c=>c.id===id?{...c,open:!c.open}:c);
+  const c = classes.find(x=>x.id===id);
+  showToast(`${c.name}: Registration ${c.open?"opened":"closed"}`);
+  closeModal();
+  render();
+}
+
+function openEditCap(id) {
+  const c = classes.find(x=>x.id===id);
+  openModal(`
+    <h3 class="font-display font-bold text-base mb-4">Edit Capacity — <span class="font-normal text-muted text-sm">${esc(c.name)}</span></h3>
+    <div class="space-y-4 mb-5">
+      <div>
+        <label class="block font-mono text-[11px] uppercase tracking-wider text-ghost mb-1.5">Class Capacity</label>
+        <input id="capInput" type="number" value="${c.cap}"
+          class="w-full px-3 py-2.5 border border-line rounded-xl font-mono text-sm focus:border-ink transition" />
+      </div>
+      <div>
+        <label class="block font-mono text-[11px] uppercase tracking-wider text-ghost mb-1.5">Over-enrollment Limit</label>
+        <input id="overCapInput" type="number" value="${c.overCap}"
+          class="w-full px-3 py-2.5 border border-line rounded-xl font-mono text-sm focus:border-ink transition" />
+      </div>
+    </div>
+    <div class="flex gap-3">
+      <button onclick="closeModal()" class="flex-1 py-2.5 border border-line rounded-xl font-bold text-sm hover:border-ink transition">Cancel</button>
+      <button onclick="saveEditCap(${id})" class="flex-1 py-2.5 bg-ink text-white rounded-xl font-bold text-sm hover:opacity-90 transition">Save Changes</button>
+    </div>`);
+}
+
+function saveEditCap(id) {
+  const cap     = parseInt($("capInput").value) || classes.find(c=>c.id===id).cap;
+  const overCap = parseInt($("overCapInput").value) || classes.find(c=>c.id===id).overCap;
+  classes = classes.map(c=>c.id===id?{...c,cap,overCap}:c);
+  showToast("Capacity updated.");
+  closeModal();
+  render();
+}
+
+function openFlagModal(id) {
+  const c = classes.find(x=>x.id===id);
+  const rows = Object.entries(FLAGS).map(([key,f])=>{
+    const active = c.flags.includes(key);
+    const on  = f.color==="rose"?"border-rose-flag bg-rose-pale text-rose-flag":"border-amber-flag bg-amber-pale text-amber-flag";
+    const off = "border-line bg-white text-ink";
+    return `
+      <div onclick="toggleFlagItem(${id},'${key}')"
+        class="flex items-center justify-between p-3 border rounded-xl cursor-pointer transition ${active?on:off}" id="flagRow_${key}">
+        <span class="font-semibold text-sm">${f.label}</span>
+        <span class="font-mono text-[10px] font-bold">${active?"ACTIVE":"OFF"}</span>
+      </div>`;
+  }).join("");
+  openModal(`
+    <h3 class="font-display font-bold text-base mb-1">Issue Flags</h3>
+    <p class="text-xs text-muted mb-4">${esc(c.name)}</p>
+    <div class="space-y-2 mb-5" id="flagRows">${rows}</div>
+    <button onclick="closeModal()" class="w-full py-2.5 bg-ink text-white rounded-xl font-bold text-sm hover:opacity-90 transition">Done</button>`);
+}
+
+function toggleFlagItem(id, flag) {
+  classes = classes.map(c=>{
+    if(c.id!==id) return c;
+    const has = c.flags.includes(flag);
+    return {...c, flags: has ? c.flags.filter(f=>f!==flag) : [...c.flags, flag]};
+  });
+  // re-render rows inside modal
+  const c = classes.find(x=>x.id===id);
+  const rows = Object.entries(FLAGS).map(([key,f])=>{
+    const active = c.flags.includes(key);
+    const on  = f.color==="rose"?"border-rose-flag bg-rose-pale text-rose-flag":"border-amber-flag bg-amber-pale text-amber-flag";
+    const off = "border-line bg-white text-ink";
+    return `
+      <div onclick="toggleFlagItem(${id},'${key}')"
+        class="flex items-center justify-between p-3 border rounded-xl cursor-pointer transition ${active?on:off}">
+        <span class="font-semibold text-sm">${f.label}</span>
+        <span class="font-mono text-[10px] font-bold">${active?"ACTIVE":"OFF"}</span>
+      </div>`;
+  }).join("");
+  $("flagRows").innerHTML = rows;
+  // re-render background
+  render();
+}
+
+function bulkOpen()  { classes = classes.map(c=>({...c,open:true}));  showToast("All registrations opened."); render(); }
+function bulkClose() { classes = classes.map(c=>({...c,open:false})); showToast("All registrations closed."); render(); }
+
+// ═══════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════
+function render() {
+  renderNav();
+  let html = "";
+  if (activeTab === "Dashboard")  html = dashboardHtml();
+  if (activeTab === "Students")   html = studentsHtml();
+  if (activeTab === "Teachers")   html = teachersHtml();
+  if (activeTab === "Classes")    html = classesHtml();
+  if (activeTab === "Attendance") html = attendanceHtml();
+  if (activeTab === "Settings")   html = settingsHtml();
+  $("appRoot").innerHTML = html;
+}
+
+render();
+</script>
+</body>
+</html>
